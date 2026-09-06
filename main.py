@@ -34,16 +34,18 @@ from services.voice_service import voice_service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(f"Starting MedBot ({settings.APP_ENV})")
+    logger.info(f"Starting SWASTHYA AI ({settings.APP_ENV})")
     try:
         init_db()
     except Exception as e:
         logger.warning(f"DB init failed (ok for dev): {e}")
+    # In production, check for essential keys here if needed
     yield
-    logger.info("Shutting down MedBot")
+    # Teardown logic
+    logger.info("Shutting down SWASTHYA AI")
 
 
-app = FastAPI(title="MedBot", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="SWASTHYA AI", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -65,7 +67,7 @@ except RuntimeError:
 @app.get("/")
 async def root() -> dict[str, Any]:
     return {
-        "app": "MedBot",
+        "app": "SWASTHYA AI",
         "status": "ok",
         "env": settings.APP_ENV,
         "channels": {

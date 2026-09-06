@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # Hugging Face
     HF_API_TOKEN: str = ""
     HF_NER_MODEL: str = "d4data/biomedical-ner-all"
-    HF_DIALOGUE_MODEL: str = "mistralai/Mistral-7B-Instruct-v0.3"
+    HF_DIALOGUE_MODEL: str = "epfl-llm/meditron-70b"
     USE_HF_INFERENCE_API: bool = True
 
     # Twilio (SMS is the primary channel)
@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     EMERGENCY_HELPLINE: str = "112"
     SUPPORT_EMAIL: str = "support@example.com"
     DISCLAIMER: str = (
-        "MedBot is an AI triage assistant, not a doctor. "
+        "SWASTHYA AI is an AI triage assistant, not a doctor. "
         "In an emergency call 112."
     )
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>MedBot — WhatsApp & SMS prototype</title>
+<title>SWASTHYA AI - WhatsApp & SMS prototype</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -338,7 +338,7 @@
 <div id="auth-page">
   <div class="auth-card">
     <div style="text-align: center; margin-bottom: 24px;">
-      <h1 style="font-family: var(--sans); font-size: 28px; font-weight: 800; color: var(--ink); margin: 0 0 8px;">MedBot</h1>
+      <h1 style="font-family: var(--sans); font-size: 28px; font-weight: 800; color: var(--ink); margin: 0 0 8px;">SWASTHYA AI</h1>
       <div style="font-family: var(--sans); font-size: 14px; color: var(--muted);">AI Triage Assistant</div>
     </div>
     <h2 id="auth-title">Login</h2>
@@ -362,7 +362,7 @@
 
 <header class="topbar">
   <div class="brand">
-    <h1>MedBot</h1>
+    <h1>SWASTHYA AI</h1>
     <span class="tag">v1.0 · prototype</span>
   </div>
   <div style="display: flex; gap: 12px; align-items: center;">
@@ -417,7 +417,7 @@
     </div>
 
     <p class="disclaimer">
-      MedBot is a triage assistant, not a doctor. In an emergency call 112.
+      SWASTHYA AI is a triage assistant, not a doctor. In an emergency call 112.
       This prototype uses <span class="entity">d4data/biomedical-ner-all</span>
       on the Hugging Face Inference API + a deterministic red-flag rules engine.
     </p>
@@ -527,7 +527,7 @@ function whatsappHTML() {
         <div class="header">
           <div class="avatar">M</div>
           <div>
-            <div>MedBot</div>
+          <div>SWASTHYA AI</div>
             <div class="sub">online · triage assistant</div>
           </div>
         </div>
@@ -551,7 +551,7 @@ function smsHTML() {
         <div class="notch"></div>
         <div class="header">
           <div class="num">+91 90000 12345</div>
-          <div class="sub">SMS · MedBot</div>
+          <div class="sub">SMS · SWASTHYA AI</div>
         </div>
         <div class="body" id="body">${renderBubbles('sms')}</div>
         <div class="composer">

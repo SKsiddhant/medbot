@@ -116,7 +116,7 @@ class DialogueManager:
         if low in {"stop", "unsubscribe"}:
             self.reset(user_id)
             return BotReply(
-                text="You've been unsubscribed. Reply START anytime to use MedBot again.",
+                text="You've been unsubscribed. Reply START anytime to use SWASTHYA AI again.",
                 end_of_flow=True,
             )
 
@@ -142,7 +142,7 @@ class DialogueManager:
     # ------------------------------------------------------------------
     def _greeting(self) -> str:
         return (
-            "👋 Hi, I'm MedBot — an AI triage assistant.\n\n"
+            "👋 Hi, I'm SWASTHYA AI - an AI triage assistant.\n\n"
             f"{settings.DISCLAIMER}\n\n"
             "In one line, what's bothering you today? (e.g. 'fever and cough for 2 days')"
         )
