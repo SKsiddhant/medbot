@@ -102,7 +102,7 @@ def triage(
     causes = _causes_for(symptoms)
 
     # 5. Advice text
-    advice = _advice_for(urgency, specialty, causes)
+    advice = _advice_for(urgency, specialty, causes, symptoms)
 
     return TriageResult(
         urgency=urgency,
@@ -113,24 +113,52 @@ def triage(
     )
 
 
-def _advice_for(urgency: Urgency, specialty: str, causes: list[str]) -> str:
+OTC_MEDS: dict[str, str] = {
+    "fever": "Paracetamol (e.g., Crocin 500mg) for fever, up to 3-4 times a day.",
+    "headache": "Paracetamol or Ibuprofen for pain relief.",
+    "cough": "Over-the-counter cough syrups or lozenges (like Honitus or Strepsils).",
+    "sore throat": "Warm salt water gargles and lozenges (like Strepsils).",
+    "acid reflux": "An antacid (like Gelusil or Digene) after meals.",
+    "gastritis": "An antacid (like Gelusil or Digene).",
+    "wound": "Clean the wound with mild soap and water, apply an antiseptic cream (like Betadine), and cover with a bandage.",
+    "muscle strain": "A topical pain relief gel (like Volini) and rest."
+}
+
+def _advice_for(urgency: Urgency, specialty: str, causes: list[str], symptoms: list[str]) -> str:
     causes_line = (
         f"Possible causes to discuss with a doctor: {', '.join(causes)}."
         if causes else ""
     )
+    
+    advice_text = ""
     if urgency == "URGENT_24H":
-        return (
+        advice_text = (
             f"Your symptoms sound significant. I recommend seeing a "
             f"{specialty} within the next 24 hours. {causes_line}"
         )
-    if urgency == "ROUTINE":
-        return (
+    elif urgency == "ROUTINE":
+        advice_text = (
             f"This can usually wait for a routine visit. Booking a "
             f"{specialty} in the next few days is a good idea. {causes_line}"
         )
-    if urgency == "SELF_CARE":
-        return (
+    elif urgency == "SELF_CARE":
+        advice_text = (
             f"This sounds mild. Try rest, fluids and monitor for 24-48 hours. "
             f"If it gets worse, book a {specialty}. {causes_line}"
         )
-    return causes_line
+    else:
+        advice_text = causes_line
+
+    # Add OTC meds recommendation
+    med_advice = []
+    for s in symptoms + causes:
+        for k, v in OTC_MEDS.items():
+            if k in s.lower() or s.lower() in k:
+                if v not in med_advice:
+                    med_advice.append(v)
+    
+    if med_advice:
+        advice_text += "\n\n💊 *General relief (if necessary):*\n• " + "\n• ".join(med_advice)
+        advice_text += "\n_(Note: Ensure you have no allergies to these. If symptoms persist, consult the doctor.)_"
+        
+    return advice_text
