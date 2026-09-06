@@ -9,7 +9,7 @@ services:
   - type: web
     name: medbot-api
     env: docker
-    plan: starter                # free tier if you skip Redis add-on
+    plan: free                # completely free tier
     dockerfilePath: ./Dockerfile
     healthCheckPath: /
     envVars:
@@ -35,16 +35,6 @@ services:
         fromDatabase:
           name: medbot-db
           property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: medbot-redis
-          property: connectionString
-
-  - type: redis
-    name: medbot-redis
-    ipAllowList: []
-    plan: free
 
 databases:
   - name: medbot-db
