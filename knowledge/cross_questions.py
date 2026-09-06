@@ -85,6 +85,8 @@ GENERIC_QUESTIONS: list[str] = [
 ]
 
 
+import random
+
 def questions_for(chief_complaint: str) -> list[str]:
     cc = chief_complaint.lower().strip()
     if cc in CROSS_QUESTIONS:
@@ -93,7 +95,11 @@ def questions_for(chief_complaint: str) -> list[str]:
     for key, qs in CROSS_QUESTIONS.items():
         if key in cc or cc in key:
             return list(qs)
-    return list(GENERIC_QUESTIONS)
+            
+    # if generic, shuffle to avoid asking the exact same every time, and limit to 2
+    shuffled = list(GENERIC_QUESTIONS)
+    random.shuffle(shuffled)
+    return shuffled[:2]
 
 
 # Specialty routing: chief complaint → best-fit doctor specialty

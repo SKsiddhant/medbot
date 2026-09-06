@@ -160,11 +160,20 @@ class ChatResponse(BaseModel):
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def api_chat(req: ChatRequest) -> ChatResponse:
+    with get_db() as db:
+        # log user message
+        db.add(Conversation(user_id=req.user_id, channel=req.channel, role="user", text=req.text))
+        
     reply = await dialogue_manager.handle_message(
         user_id=req.user_id,
         text=req.text,
         channel=req.channel,
     )
+    
+    with get_db() as db:
+        # log bot message
+        db.add(Conversation(user_id=req.user_id, channel=req.channel, role="bot", text=reply.text))
+        
     return ChatResponse(
         text=reply.text,
         quick_replies=reply.quick_replies,
@@ -250,3 +259,39 @@ async def api_image(
         numbered_options=reply.numbered_options,
         end_of_flow=reply.end_of_flow,
     )
+
+class AuthRequest(BaseModel):
+    username: str
+    password: str
+
+from database.session import get_db
+from database.models import User, Conversation
+
+@app.post("/api/signup")
+async def signup(req: AuthRequest) -> dict[str, str]:
+    with get_db() as db:
+        if db.query(User).filter(User.username == req.username).first():
+            return JSONResponse({"error": "User already exists"}, status_code=400)
+        new_user = User(username=req.username, password=req.password)
+        db.add(new_user)
+    return {"status": "ok", "user_id": req.username}
+
+@app.post("/api/login")
+async def login(req: AuthRequest) -> dict[str, str]:
+    with get_db() as db:
+        user = db.query(User).filter(User.username == req.username, User.password == req.password).first()
+        if not user:
+            return JSONResponse({"error": "Invalid credentials"}, status_code=400)
+    return {"status": "ok", "user_id": req.username}
+
+@app.get("/api/history/{username}")
+async def get_history(username: str) -> dict[str, Any]:
+    with get_db() as db:
+        # Get actual chat history from conversations table if we are logging it, 
+        # but DialogueManager doesn't log automatically in dev unless we added that.
+        # Let's just mock or get triage logs. Wait, dialogue_manager uses session in-memory.
+        # If user wants history, we can fetch from Conversation.
+        convs = db.query(Conversation).filter(Conversation.user_id == username).order_by(Conversation.created_at.desc()).limit(50).all()
+        history = [{"role": c.role, "text": c.text, "time": c.created_at.isoformat()} for c in convs]
+    return {"history": history[::-1]}
+
