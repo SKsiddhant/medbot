@@ -256,7 +256,39 @@
   }
   .typing { opacity: 0.6; font-style: italic; }
 
-  /* -------- Auth & History Modals -------- */
+  /* -------- Auth Page -------- */
+  #auth-page {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+  }
+  .auth-card {
+    background: white; padding: 48px; border-radius: 24px;
+    width: 90%; max-width: 440px; font-family: var(--sans);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 1);
+  }
+  .auth-card h2 { margin-top: 0; font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 24px; }
+  .auth-card input {
+    width: 100%; padding: 14px 16px; margin-bottom: 16px;
+    border: 1px solid var(--line); border-radius: 12px; font-family: var(--sans);
+    font-size: 15px; outline: none; transition: border-color 0.2s ease;
+    background: #f8fafc;
+  }
+  .auth-card input:focus { border-color: var(--accent); background: white; }
+  .auth-card button {
+    width: 100%; padding: 14px; background: var(--accent); color: white;
+    border: 0; border-radius: 12px; cursor: pointer; font-family: var(--sans);
+    font-weight: 600; font-size: 15px; margin-bottom: 12px; transition: background 0.2s ease;
+  }
+  .auth-card button:hover { background: #2563eb; }
+  .auth-card button.secondary {
+    background: transparent; color: var(--muted); border: 1px solid var(--line);
+  }
+  .auth-card button.secondary:hover { background: var(--paper); color: var(--ink); }
+
+  /* -------- Modals (History) -------- */
   .modal-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(15, 23, 32, 0.4); z-index: 100;
@@ -303,16 +335,22 @@
 </head>
 <body>
 
-<div id="auth-modal" class="modal-overlay">
-  <div class="modal-box">
+<div id="auth-page">
+  <div class="auth-card">
+    <div style="text-align: center; margin-bottom: 24px;">
+      <h1 style="font-family: var(--sans); font-size: 28px; font-weight: 800; color: var(--ink); margin: 0 0 8px;">MedBot</h1>
+      <div style="font-family: var(--sans); font-size: 14px; color: var(--muted);">AI Triage Assistant</div>
+    </div>
     <h2 id="auth-title">Login</h2>
-    <input type="text" id="auth-user" placeholder="Username" autocomplete="off"/>
-    <input type="password" id="auth-pass" placeholder="Password"/>
+    <input type="text" id="auth-user" placeholder="Username" autocomplete="off" onkeydown="if(event.key==='Enter') document.getElementById('auth-pass').focus()"/>
+    <input type="password" id="auth-pass" placeholder="Password" onkeydown="if(event.key==='Enter') doAuth()"/>
     <button onclick="doAuth()">Submit</button>
     <button class="secondary" onclick="toggleAuthMode()" id="auth-toggle">Need an account? Sign up</button>
-    <div id="auth-error" style="color:red; font-size: 12px; margin-top: 5px;"></div>
+    <div id="auth-error" style="color:red; font-size: 13px; margin-top: 8px; text-align: center;"></div>
   </div>
 </div>
+
+<div id="app-container" style="display: none;">
 
 <div id="history-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box">
@@ -386,6 +424,7 @@
   </aside>
 </main>
 
+</div> <!-- /app-container -->
 <script>
 /* ================================================================
    Auth & History
@@ -419,7 +458,13 @@ async function doAuth() {
     }
     loggedInUser = data.user_id;
     state.userId = loggedInUser;
-    document.getElementById('auth-modal').style.display = 'none';
+    document.getElementById('auth-page').style.display = 'none';
+    document.getElementById('app-container').style.display = 'block';
+    
+    // Kick off greeting
+    if (state.messages.length === 0) {
+      sendText('hi');
+    }
   } catch (e) {
     document.getElementById('auth-error').innerText = 'Network error';
   }
@@ -865,8 +910,6 @@ async function sendImage(inputElement) {
 ================================================================ */
 renderPhone();
 updateInspector();
-// Kick off the greeting on load
-sendText('hi');
 </script>
 </body>
 </html>
