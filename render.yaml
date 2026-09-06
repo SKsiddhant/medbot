@@ -1,0 +1,53 @@
+# Render.com blueprint — one-click deploy
+# https://render.com/docs/blueprint-spec
+#
+# Push this repo to GitHub, then in Render dashboard:
+#   New + → Blueprint → point at your repo → Apply
+# Fill secrets (HF_API_TOKEN, TWILIO_*, META_*) in the dashboard.
+
+services:
+  - type: web
+    name: medbot-api
+    env: docker
+    plan: starter                # free tier if you skip Redis add-on
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: HF_API_TOKEN
+        sync: false              # prompted in dashboard
+      - key: USE_HF_INFERENCE_API
+        value: "true"
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_SMS_FROM
+        sync: false
+      - key: META_WHATSAPP_TOKEN
+        sync: false
+      - key: META_PHONE_NUMBER_ID
+        sync: false
+      - key: META_VERIFY_TOKEN
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: medbot-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: medbot-redis
+          property: connectionString
+
+  - type: redis
+    name: medbot-redis
+    ipAllowList: []
+    plan: free
+
+databases:
+  - name: medbot-db
+    plan: free
+    databaseName: medbot
+    user: medbot
