@@ -1,0 +1,8 @@
+# Only needed when USE_HF_INFERENCE_API=false (runs the NER model inside this process).
+# Large: torch alone is ~2 GB. Not required for the default hosted-API mode.
+# Install with:  pip install -r requirements.txt -r requirements-local-ml.txt
+transformers==4.44.2
+torch==2.4.1
+huggingface-hub==0.25.0
+sentencepiece==0.2.0
+accelerate==0.34.2

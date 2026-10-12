@@ -431,6 +431,7 @@
 ================================================================ */
 let isLoginMode = true;
 let loggedInUser = null;
+let authToken = null;
 
 function toggleAuthMode() {
   isLoginMode = !isLoginMode;
@@ -457,6 +458,7 @@ async function doAuth() {
       return;
     }
     loggedInUser = data.user_id;
+    authToken = data.token;
     state.userId = loggedInUser;
     document.getElementById('auth-page').style.display = 'none';
     document.getElementById('app-container').style.display = 'block';
@@ -476,8 +478,11 @@ async function loadHistory() {
   const list = document.getElementById('history-list');
   list.innerHTML = 'Loading...';
   try {
-    const r = await fetch('/api/history/' + loggedInUser);
+    const r = await fetch('/api/history/' + encodeURIComponent(loggedInUser), {
+      headers: {'Authorization': 'Bearer ' + authToken}
+    });
     const data = await r.json();
+    if (!r.ok) { list.textContent = data.error || 'Failed to load.'; return; }
     if (!data.history || data.history.length === 0) {
       list.innerHTML = 'No history found.';
       return;
