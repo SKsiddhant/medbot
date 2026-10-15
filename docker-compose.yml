@@ -1,12 +1,14 @@
-version: "3.9"
-
 services:
   api:
     build: .
     ports:
       - "8000:8000"
     env_file:
-      - .env
+      - path: .env        # optional: copy .env.example to .env to add your API keys
+        required: false
+    environment:               # inside the network the services are reached by name, not localhost
+      DATABASE_URL: postgresql://medbot:medbot@db:5432/medbot
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       - db
       - redis
@@ -21,7 +23,7 @@ services:
       POSTGRES_PASSWORD: medbot
       POSTGRES_DB: medbot
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"   # local only; the password is a dev default
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
@@ -29,7 +31,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     restart: unless-stopped
 
 volumes:

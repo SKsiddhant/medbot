@@ -3,6 +3,7 @@ Central configuration.
 All settings load from environment variables (see .env.example).
 """
 from functools import lru_cache
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +14,8 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     APP_PORT: int = 8000
     LOG_LEVEL: str = "INFO"
+    SECRET_KEY: str = ""          # signs login tokens; REQUIRED when APP_ENV=production
+    CORS_ORIGINS: str = "*"       # comma-separated list; restrict in production
 
     # Hugging Face
     HF_API_TOKEN: str = ""
@@ -34,6 +37,12 @@ class Settings(BaseSettings):
     # DB
     DATABASE_URL: str = "sqlite:///./medbot.db"
     REDIS_URL: str = "redis://localhost:6379/0"
+
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def _normalise_db_scheme(cls, v: str) -> str:
+        # Render and Heroku hand out postgres://, which SQLAlchemy 2 rejects.
+        return "postgresql://" + v[len("postgres://"):] if v.startswith("postgres://") else v
 
     # Doctor booking
     PRACTO_API_KEY: str = ""
