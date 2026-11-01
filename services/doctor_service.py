@@ -54,7 +54,7 @@ class DoctorService:
         # Specialty match (exact or contains)
         spec_l = specialty.lower()
         candidates = [
-            d for d in self._doctors
+            dict(d) for d in self._doctors
             if spec_l in d["specialty"].lower()
             or d["specialty"].lower() in spec_l
         ]
@@ -70,7 +70,7 @@ class DoctorService:
         # If we don't have specialty match, widen to General Physician
         if not candidates:
             candidates = [
-                d for d in self._doctors
+                dict(d) for d in self._doctors
                 if d["specialty"] == "General Physician"
                 and (not city or d["city"].lower() == city.lower())
             ]

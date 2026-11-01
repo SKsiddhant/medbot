@@ -17,24 +17,29 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, Form, Request, Response
+from fastapi import FastAPI, File, Form, Header, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 
 from config import settings
-from database.session import init_db
+from database.models import Conversation, User
+from database.session import get_db, init_db
+from services import auth
 from services.dialogue_manager import dialogue_manager
 from services.sms_service import sms_service
 from services.whatsapp_service import whatsapp_service
 from services.voice_service import voice_service
+from services.location_service import location_service
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting SWASTHYA AI ({settings.APP_ENV})")
+    auth.ensure_configured()  # raises in production if SECRET_KEY is missing
     try:
         init_db()
     except Exception as e:
@@ -49,7 +54,7 @@ app = FastAPI(title="SWASTHYA AI", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],       # tighten in production
+    allow_origins=[o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()],  # set CORS_ORIGINS in production
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -189,7 +194,6 @@ async def api_reset(req: ChatRequest) -> dict[str, str]:
     dialogue_manager.reset(req.user_id)
     return {"status": "reset"}
 
-from fastapi import UploadFile, File
 
 @app.post("/api/voice", response_model=ChatResponse)
 async def api_voice(
@@ -222,8 +226,6 @@ class LocationRequest(BaseModel):
     lng: float
     channel: str = "web"
 
-from services.location_service import location_service
-
 @app.post("/api/location", response_model=ChatResponse)
 async def api_location(req: LocationRequest) -> ChatResponse:
     loc = location_service.resolve_coords(req.lat, req.lng, source="gps")
@@ -246,8 +248,8 @@ async def api_image(
     channel: str = Form("web"),
     image: UploadFile = File(...)
 ) -> ChatResponse:
-    # In a real app, this would use a vision model to analyze the image
-    # For now, we simulate by assuming it's a wound (as requested)
+    # DEMO ONLY: no vision model is wired up, so the image is not looked at. Every upload is
+    # treated as a wound, and the reply says so rather than claiming a real analysis.
     text = "I have a wound here. [Attached image of a wound]"
     
     reply = await dialogue_manager.handle_message(
@@ -256,7 +258,7 @@ async def api_image(
         channel=channel,
     )
     return ChatResponse(
-        text=f"(Image analyzed: Wound detected)\n\n{reply.text}",
+        text=f"(Demo mode: the image was not analysed. Continuing as if it shows a wound; please describe it in words.)\n\n{reply.text}",
         quick_replies=reply.quick_replies,
         numbered_options=reply.numbered_options,
         end_of_flow=reply.end_of_flow,
@@ -266,34 +268,52 @@ class AuthRequest(BaseModel):
     username: str
     password: str
 
-from database.session import get_db
-from database.models import User, Conversation
+def _bad(message: str, status: int = 400) -> JSONResponse:
+    return JSONResponse({"error": message}, status_code=status)
+
 
 @app.post("/api/signup")
-async def signup(req: AuthRequest) -> dict[str, str]:
-    with get_db() as db:
-        if db.query(User).filter(User.username == req.username).first():
-            return JSONResponse({"error": "User already exists"}, status_code=400)
-        new_user = User(username=req.username, password=req.password)
-        db.add(new_user)
-    return {"status": "ok", "user_id": req.username}
+async def signup(req: AuthRequest) -> Any:
+    username = req.username.strip()
+    if not 3 <= len(username) <= 64:
+        return _bad("Username must be 3-64 characters.")
+    if len(req.password) < 8:
+        return _bad("Password must be at least 8 characters.")
+    try:
+        with get_db() as db:
+            if db.query(User).filter(User.username == username).first():
+                return _bad("User already exists")
+            db.add(User(username=username, password=auth.hash_password(req.password)))
+    except IntegrityError:  # two signups for the same name raced past the check above
+        return _bad("User already exists")
+    return {"status": "ok", "user_id": username, "token": auth.make_token(username)}
+
 
 @app.post("/api/login")
-async def login(req: AuthRequest) -> dict[str, str]:
+async def login(req: AuthRequest) -> Any:
+    username = req.username.strip()
     with get_db() as db:
-        user = db.query(User).filter(User.username == req.username, User.password == req.password).first()
-        if not user:
-            return JSONResponse({"error": "Invalid credentials"}, status_code=400)
-    return {"status": "ok", "user_id": req.username}
+        user = db.query(User).filter(User.username == username).first()
+        if not auth.verify_password(req.password, user.password if user else None):
+            return _bad("Invalid credentials", 401)
+        if not auth.is_hashed(user.password):  # upgrade a legacy plaintext row on first login
+            user.password = auth.hash_password(req.password)
+    return {"status": "ok", "user_id": username, "token": auth.make_token(username)}
+
 
 @app.get("/api/history/{username}")
-async def get_history(username: str) -> dict[str, Any]:
+async def get_history(username: str, authorization: str | None = Header(default=None)) -> Any:
+    # Chat history is medical data: only the signed-in user may read their own.
+    token = (authorization or "").removeprefix("Bearer ").strip()
+    if auth.verify_token(token) != username:
+        return _bad("Sign in to view your history.", 401)
     with get_db() as db:
-        # Get actual chat history from conversations table if we are logging it, 
-        # but DialogueManager doesn't log automatically in dev unless we added that.
-        # Let's just mock or get triage logs. Wait, dialogue_manager uses session in-memory.
-        # If user wants history, we can fetch from Conversation.
-        convs = db.query(Conversation).filter(Conversation.user_id == username).order_by(Conversation.created_at.desc()).limit(50).all()
+        convs = (
+            db.query(Conversation)
+            .filter(Conversation.user_id == username)
+            .order_by(Conversation.created_at.desc())
+            .limit(50)
+            .all()
+        )
         history = [{"role": c.role, "text": c.text, "time": c.created_at.isoformat()} for c in convs]
     return {"history": history[::-1]}
-

@@ -52,7 +52,8 @@ User
                                              ├── Triage engine → specialty
                                              └── Doctor service → booking
                                                   ↓
-                                        Postgres (audit) + Redis (session)
+                                        Postgres (audit trail, accounts)
+                                        dialogue state: in-process memory (Redis planned)
 ```
 
 **Design choice:** The dialogue is a state machine, not free-form LLM. Medical bots must be auditable and can't afford drift on red flags. The LLM (NER) does entity extraction; deterministic Python does the reasoning.
@@ -67,11 +68,14 @@ git clone <your-repo>
 cd medbot
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+# Only if you set USE_HF_INFERENCE_API=false (runs the model in-process, ~2 GB):
+# pip install -r requirements-local-ml.txt
 
 # 2. Configure
 cp .env.example .env
 # minimum: set HF_API_TOKEN (free at huggingface.co/settings/tokens)
 # leave USE_HF_INFERENCE_API=true (no GPU needed)
+# SECRET_KEY is optional locally, required when APP_ENV=production
 
 # 3. Run
 uvicorn main:app --reload
@@ -79,6 +83,8 @@ uvicorn main:app --reload
 # 4. Open the web prototype
 open http://localhost:8000/ui
 ```
+
+Run the tests with `pip install -r requirements-dev.txt && pytest`.
 
 **That's it — the web UI works fully without Twilio or Meta credentials.** Both phones (WhatsApp look, SMS look) hit the same backend brain.
 
@@ -92,10 +98,9 @@ open http://localhost:8000/ui
 # Push repo to GitHub, then in Render dashboard:
 #   New + → Blueprint → point at your repo
 # Render reads render.yaml and provisions:
-#   - Web service (Docker)
+#   - Web service (Docker), with SECRET_KEY generated for you
 #   - Postgres (free tier)
-#   - Redis (free tier)
-# Fill secrets in the dashboard when prompted.
+# Fill the other secrets in the dashboard when prompted.
 ```
 
 Your API is now live at `https://medbot-api.onrender.com`.
@@ -103,8 +108,11 @@ Your API is now live at `https://medbot-api.onrender.com`.
 ### Option B: Docker Compose (any VPS)
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
+
+Run a single worker (the default): conversation state is held in process memory, so more
+workers would each keep a different copy. Set `CORS_ORIGINS` to your site's origin in production.
 
 ---
 
@@ -183,6 +191,8 @@ You still need a **DPO** for data protection and a **medical advisor** before pu
 
 ## Roadmap (post-MVP)
 
+- Persist dialogue state in Redis (needed before running more than one worker)
+- Verify Twilio and Meta webhook signatures on `/webhook/sms` and `/webhook/whatsapp`
 - Fine-tune `mistralai/Mistral-7B-Instruct-v0.3` on MedDialog for more natural cross-questioning
 - Replace mock doctor JSON with Practo / Lybrate partner API
 - Add video consultation link generation (Jitsi/Daily.co)

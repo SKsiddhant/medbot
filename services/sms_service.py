@@ -18,6 +18,7 @@ request/reply, but wired in below for completeness.
 from __future__ import annotations
 
 from typing import Any
+from xml.sax.saxutils import escape
 
 from loguru import logger
 
@@ -76,7 +77,7 @@ class SMSService:
             return str(resp)
 
         # Fallback if Twilio SDK isn't installed
-        safe = full.replace("<", "&lt;").replace(">", "&gt;")
+        safe = escape(full)  # also escapes "&", which broke the XML before
         return f"<Response><Message>{safe}</Message></Response>"
 
     # ------------------------------------------------------------------
